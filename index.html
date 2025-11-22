@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kognia Legal AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
+    
+    <!-- Load PDF.js globally to avoid ESM import crashes -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+      // Configure PDF.js Worker immediately after load
+      if (window.pdfjsLib) {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+    </script>
+
+    <style>
+      :root {
+        --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+        --font-serif: 'Merriweather', serif;
+      }
+      body {
+        font-family: var(--font-sans);
+        background-color: #f8fafc;
+        color: #1e293b; /* Slate 800 */
+      }
+      h1, h2, h3, h4, h5, h6, button, input {
+        font-family: var(--font-sans);
+      }
+      .font-serif {
+        font-family: var(--font-serif);
+      }
+      
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; 
+        border-radius: 10px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; 
+      }
+
+      /* Animations */
+      @keyframes fade-in-up {
+        0% {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-in-up {
+        animation: fade-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+
+      @keyframes pulse-soft {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+      .animate-pulse-soft {
+        animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+    </style>
+    <script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
+    "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react": "https://esm.sh/react@19.0.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+  }
+}
+</script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

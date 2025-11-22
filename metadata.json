@@ -1,0 +1,7 @@
+{
+  "name": "Kognia Legal AI",
+  "description": "Intelligent Legal Assistant using RAG and Gemini 2.5 to analyze contracts and legal documents.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
