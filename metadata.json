@@ -1,6 +1,6 @@
 {
-  "name": "Kognia Legal AI",
-  "description": "Intelligent Legal Assistant using RAG and Gemini 2.5 to analyze contracts and legal documents.",
+  "name": "Asistente Municipal",
+  "description": "Asistente inteligente para empleados municipales basado en documentos oficiales.",
   "requestFramePermissions": [
     "microphone"
   ]

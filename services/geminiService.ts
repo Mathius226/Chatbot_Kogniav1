@@ -1,8 +1,15 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { UploadedDocument, LegalResponse, DocumentChunk } from "../types";
 
-// Initialize Gemini Client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize Gemini Client dynamically to ensure it picks up env changes
+const getGeminiClient = () => {
+  const rawKey = process.env.GEMINI_API_KEY || process.env.API_KEY || "";
+  const cleanKey = rawKey.replace(/^["']|["']$/g, '').trim();
+  if (!cleanKey) {
+    throw new Error("API_KEY_MISSING");
+  }
+  return new GoogleGenAI({ apiKey: cleanKey });
+};
 
 // --- RAG CONSTANTS ---
 const CHUNK_SIZE = 1000; // Characters per chunk
@@ -11,27 +18,27 @@ const EMBEDDING_MODEL = "text-embedding-004";
 const GENERATION_MODEL = "gemini-2.5-flash";
 
 // Threshold to switch from Full Context to Vector RAG
-const FULL_CONTEXT_THRESHOLD = 60000; 
+// Lowered to 50,000 chars to ensure fast responses.
+const FULL_CONTEXT_THRESHOLD = 50000; 
 
 // --- SYSTEM INSTRUCTION ---
 const SYSTEM_INSTRUCTION = `
-ROL: Kognia Legal AI - Asistente Legal Claro y Accesible.
+ROL: Asistente de Empleados Municipales.
 
-OBJETIVO: Explicar documentos legales a personas NO expertas en derecho.
+OBJETIVO: Responder preguntas de los empleados del municipio basándote ÚNICA Y EXCLUSIVAMENTE en los documentos oficiales proporcionados.
 
-REGLAS DE ESTILO (UX):
-1. LENGUAJE SENCILLO: Evita la jerga legal ("legalese") innecesaria. En lugar de "La parte contratante se obliga a...", di "El contratista debe...".
-2. RESPUESTAS DIRECTAS: Ve al grano. Ejemplo: "El contrato dura 1 año", no "Según la cláusula quinta del presente acuerdo...".
-3. CERO ALUCINACIÓN: Si la respuesta no está en el texto, di: "El documento no contiene información suficiente sobre ese tema." y pon confidence_score en 0.
-4. EVIDENCIA: Todo lo que digas debe estar respaldado por el texto.
-5. FORMATO: Usa párrafos cortos.
+REGLAS:
+1. SOLO CONTEXTO: Tu respuesta debe derivarse estrictamente de los documentos proporcionados.
+2. NO INVENTAR: Si la respuesta no se encuentra en el texto proporcionado, DEBES responder exactamente con esta frase: "No encontré esta información en los documentos oficiales". En este caso, pon confidence_score en 0.
+3. EVIDENCIA: Todo lo que digas debe estar respaldado por el texto.
+4. FORMATO: Usa párrafos cortos y lenguaje claro.
 
 Estructura JSON de Salida:
-- answer: La respuesta explicativa y fácil de leer.
-- source_excerpts: Array de strings con las citas EXACTAS del texto original que prueban tu respuesta. Incluye número de página si es posible verla en el contexto.
+- answer: La respuesta a la pregunta del empleado.
+- source_excerpts: Array de strings con las citas EXACTAS del texto original que prueban tu respuesta.
 - confidence_score: Un número entero (0-100). 
    - 90-100: Alta confianza (Explícito).
-   - 50-89: Confianza media (Infeirdo).
+   - 50-89: Confianza media (Inferido).
    - 0-49: Baja confianza o No encontrado.
 `;
 
@@ -77,13 +84,14 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 
 async function getEmbedding(text: string): Promise<number[]> {
   try {
+    const ai = getGeminiClient();
     const result = await ai.models.embedContent({
       model: EMBEDDING_MODEL,
-      content: { parts: [{ text }] },
+      contents: text,
     });
-    return result.embedding.values;
+    return result.embeddings?.[0]?.values || [];
   } catch (error) {
-    console.error("Error getting embedding:", error);
+    console.warn("Error getting embedding (skipping chunk):", error);
     return [];
   }
 }
@@ -91,21 +99,44 @@ async function getEmbedding(text: string): Promise<number[]> {
 export const indexDocument = async (doc: UploadedDocument): Promise<UploadedDocument> => {
   const textChunks = chunkText(doc.content, CHUNK_SIZE, CHUNK_OVERLAP);
   const processedChunks: DocumentChunk[] = [];
-  const maxChunksToIndex = 50; 
   
-  for (let i = 0; i < Math.min(textChunks.length, maxChunksToIndex); i++) {
-    const chunkText = textChunks[i];
+  const maxChunksToIndex = 300; 
+  const chunksToProcess = textChunks.slice(0, maxChunksToIndex);
+  
+  // Process in batches of 50 to avoid rate limits and payload size issues
+  const BATCH_SIZE = 50;
+  
+  for (let i = 0; i < chunksToProcess.length; i += BATCH_SIZE) {
+    const batch = chunksToProcess.slice(i, i + BATCH_SIZE);
     try {
-        const embedding = await getEmbedding(chunkText);
-        if (embedding.length > 0) {
-        processedChunks.push({
-            id: `${doc.id}-chunk-${i}`,
+      const ai = getGeminiClient();
+      const result = await ai.models.embedContent({
+        model: EMBEDDING_MODEL,
+        contents: batch,
+      });
+      
+      const embeddings = result.embeddings || [];
+      
+      batch.forEach((chunkText, index) => {
+        const embeddingValues = embeddings[index]?.values;
+        if (embeddingValues && embeddingValues.length > 0) {
+          processedChunks.push({
+            id: `${doc.id}-chunk-${i + index}`,
             text: chunkText,
-            embedding: embedding
-        });
+            embedding: embeddingValues
+          });
         }
-    } catch (e) {
-        console.warn("Skipping chunk embedding due to error");
+      });
+      
+      // Small delay between batches
+      if (i + BATCH_SIZE < chunksToProcess.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    } catch (e: any) {
+      console.warn(`Skipping batch ${i} to ${i + BATCH_SIZE} due to error:`, e);
+      if (e.message === "API_KEY_MISSING" || e.message?.includes("API key not valid")) {
+        throw new Error(e.message === "API_KEY_MISSING" ? "Falta la clave API de Gemini. Configura GEMINI_API_KEY en Settings." : "La clave API de Gemini configurada no es válida.");
+      }
     }
   }
 
@@ -159,6 +190,7 @@ export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
   try {
     const base64Audio = await blobToBase64(audioBlob);
     
+    const ai = getGeminiClient();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash", // Multimodal capable
       contents: {
@@ -200,15 +232,17 @@ export const queryLegalAssistant = async (
 
   const totalLength = documents.reduce((acc, doc) => acc + doc.content.length, 0);
   let contextToUse = "";
-  let mode = "";
-
+  
+  // Logic:
+  // If document fits in context (which is huge for Gemini 2.5), use Full Context for max accuracy.
+  // Otherwise, fall back to RAG.
   if (totalLength < FULL_CONTEXT_THRESHOLD) {
-      mode = "FULL_CONTEXT";
+      // FULL ACCURACY MODE
       contextToUse = documents.map(d => `--- DOCUMENTO: ${d.name} ---\n${d.content}`).join("\n\n");
   } else {
-      mode = "HYBRID_RAG";
-      const vectorChunks = await retrieveRelevantChunks(question, documents, 6);
-      const preambles = documents.map(d => `[INICIO DEL DOCUMENTO ${d.name}]: ${d.content.substring(0, 3000)}...`).join("\n\n");
+      // MASSIVE DOCUMENT MODE (Fallback)
+      const vectorChunks = await retrieveRelevantChunks(question, documents, 10);
+      const preambles = documents.map(d => `[INICIO DEL DOCUMENTO ${d.name}]: ${d.content.substring(0, 5000)}...`).join("\n\n");
       
       contextToUse = `
       SECCIONES INTRODUCTORIAS (Contexto General):
@@ -230,6 +264,7 @@ export const queryLegalAssistant = async (
   `;
 
   try {
+    const ai = getGeminiClient();
     const response = await ai.models.generateContent({
       model: GENERATION_MODEL,
       contents: [
@@ -242,7 +277,7 @@ export const queryLegalAssistant = async (
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
         responseSchema: responseSchema,
-        temperature: 0.0,
+        temperature: 0.0, // Max determinism
       },
     });
 
@@ -255,8 +290,22 @@ export const queryLegalAssistant = async (
     const parsed: LegalResponse = JSON.parse(textResponse);
     return parsed;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error querying Gemini:", error);
+    if (error.message === "API_KEY_MISSING") {
+      return {
+        answer: "⚠️ Error: No se ha configurado una clave API de Gemini. Por favor, añade la variable GEMINI_API_KEY en los Settings con una clave válida (AIza...).",
+        source_excerpts: [],
+        confidence_score: 0
+      };
+    }
+    if (error.message?.includes("API key not valid")) {
+       return {
+        answer: "⚠️ Error: La clave API de Gemini configurada no es válida o ha sido revocada. Por favor, genera una nueva clave en Google AI Studio y actualízala en los Settings.",
+        source_excerpts: [],
+        confidence_score: 0
+      };
+    }
     return {
       answer: "Lo siento, hubo un problema técnico al analizar el documento. Por favor, intenta reformular tu pregunta.",
       source_excerpts: [],

@@ -3,9 +3,10 @@ import { ChatMessage, Sender } from '../types';
 
 interface MessageItemProps {
   message: ChatMessage;
+  onFeedback?: (messageId: string, type: 'up' | 'down') => void;
 }
 
-export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
+export const MessageItem: React.FC<MessageItemProps> = ({ message, onFeedback }) => {
   const isUser = message.sender === Sender.User;
   const isBot = message.sender === Sender.Bot;
   const isSystem = message.sender === Sender.System;
@@ -163,22 +164,42 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message }) => {
                   </div>
 
                   {/* Copy Button (Rule 14) */}
-                  <button 
-                    onClick={handleCopy}
-                    className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 hover:text-indigo-600 transition-colors px-2 py-1 rounded hover:bg-slate-50"
-                  >
-                      {copied ? (
-                          <>
-                            <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                            <span className="text-green-500">Copiado</span>
-                          </>
-                      ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
-                            <span>Copiar</span>
-                          </>
-                      )}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {onFeedback && (
+                      <div className="flex items-center gap-1 mr-2 border-r border-slate-200 pr-2">
+                        <button 
+                          onClick={() => onFeedback(message.id, 'up')}
+                          className={`p-1 rounded hover:bg-slate-100 transition-colors ${message.feedback === 'up' ? 'text-green-600 bg-green-50' : 'text-slate-400'}`}
+                          title="Útil"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.514" /></svg>
+                        </button>
+                        <button 
+                          onClick={() => onFeedback(message.id, 'down')}
+                          className={`p-1 rounded hover:bg-slate-100 transition-colors ${message.feedback === 'down' ? 'text-red-600 bg-red-50' : 'text-slate-400'}`}
+                          title="No útil"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14H5.236a2 2 0 01-1.789-2.894l3.5-7A2 2 0 018.736 3h4.018a2 2 0 01.485.06l3.76.94m-7 10v5a2 2 0 002 2h.096c.5 0 .905-.405.905-.904 0-.714.211-1.412.608-2.006L17 13V4m-7 10h2m5-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2.514" /></svg>
+                        </button>
+                      </div>
+                    )}
+                    <button 
+                      onClick={handleCopy}
+                      className="flex items-center gap-1.5 text-[10px] font-medium text-slate-400 hover:text-indigo-600 transition-colors px-2 py-1 rounded hover:bg-slate-50"
+                    >
+                        {copied ? (
+                            <>
+                              <svg className="w-3.5 h-3.5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                              <span className="text-green-500">Copiado</span>
+                            </>
+                        ) : (
+                            <>
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                              <span>Copiar</span>
+                            </>
+                        )}
+                    </button>
+                  </div>
               </div>
             </div>
           )}

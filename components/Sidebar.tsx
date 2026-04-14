@@ -59,73 +59,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div>
             <div className="flex items-center gap-3 mb-1">
             <div className="w-8 h-8 bg-slate-900 rounded-xl flex items-center justify-center shadow-lg shadow-slate-800/20">
-                <span className="text-white font-serif font-bold text-lg">K</span>
+                <span className="text-white font-serif font-bold text-lg">A</span>
             </div>
-            <h1 className="font-sans text-xl font-bold text-slate-800 tracking-tight">Kognia<span className="text-indigo-600">.ai</span></h1>
+            <h1 className="font-sans text-xl font-bold text-slate-800 tracking-tight">Asistente<span className="text-indigo-600">.ai</span></h1>
             </div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1 pl-1">Asistente Legal AI</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1 pl-1">Asistente Municipal</p>
         </div>
         <button onClick={onClose} className="md:hidden p-2 text-slate-400 hover:text-slate-600">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
         </button>
       </div>
 
-      {/* Upload Section */}
-      <div className="px-6 mb-6">
-        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3">Subir Archivo</h2>
-            <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                className="hidden"
-                accept=".txt,.pdf" 
-                multiple
-            />
-            <Button 
-                onClick={() => fileInputRef.current?.click()} 
-                className="w-full justify-center bg-white border border-indigo-100 text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 shadow-sm py-3 group"
-                variant="secondary"
-            >
-                <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    <span className="text-sm font-semibold">Seleccionar PDF/TXT</span>
-                </div>
-            </Button>
-        </div>
-      </div>
-
-      {/* File List (Rule 5) */}
       <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-3">
-        <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider pl-1">Documentos Activos</h3>
-        {documents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-24 text-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50">
-                <p className="text-xs text-slate-400 font-medium">Lista vacía</p>
-            </div>
-        ) : (
-            documents.map((doc) => (
-            <div key={doc.id} className="group relative p-3 bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200">
-                <div className="flex items-start gap-3">
-                    <FileIcon fileName={doc.name} className="w-9 h-9 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-slate-700 truncate mb-1" title={doc.name}>{doc.name}</p>
-                        <div className="flex items-center gap-3 text-[10px] text-slate-400 font-medium">
-                            <span>{formatSize(doc.size)}</span>
-                            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                            <span>{doc.pageCount} pág{doc.pageCount !== 1 ? 's' : ''}</span>
-                        </div>
-                    </div>
-                    <button 
-                        onClick={() => onRemoveDocument(doc.id)}
-                        className="text-slate-300 hover:text-red-500 p-1 rounded-md hover:bg-red-50 transition-colors"
-                        title="Eliminar documento"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                </div>
-            </div>
-            ))
-        )}
+        <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 shadow-sm text-sm text-slate-600">
+          Este asistente responde preguntas basándose únicamente en los documentos oficiales del municipio cargados por el administrador.
+        </div>
       </div>
       
       {/* Footer Actions */}

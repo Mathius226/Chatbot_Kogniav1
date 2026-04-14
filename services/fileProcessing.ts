@@ -49,34 +49,47 @@ export async function extractTextFromFile(file: File): Promise<ProcessedFile> {
 
 async function extractTextFromPDF(file: File): Promise<ProcessedFile> {
   const pdfjsLib = getPdfLib();
-  const arrayBuffer = await file.arrayBuffer();
   
-  // Use Uint8Array to be safe with all browser versions
-  const uint8Array = new Uint8Array(arrayBuffer);
+  // Suppress PDF.js warnings and errors to avoid console spam
+  const originalWarn = console.warn;
+  const originalError = console.error;
+  console.warn = () => {};
+  console.error = () => {};
 
-  // Load the document
-  const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
-  const pdf = await loadingTask.promise;
-  
-  let fullText = '';
-  const numPages = pdf.numPages;
-  
-  // Iterate over all pages
-  for (let i = 1; i <= numPages; i++) {
-    try {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        
-        // Extract text items safely
-        const pageText = textContent.items
-        .map((item: any) => item.str || '')
-        .join(' ');
-        
-        fullText += `--- Página ${i} ---\n${pageText}\n\n`;
-    } catch (pageError) {
-        console.warn(`Error reading page ${i}`, pageError);
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Use Uint8Array to be safe with all browser versions
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    // Load the document
+    const loadingTask = pdfjsLib.getDocument({ data: uint8Array });
+    const pdf = await loadingTask.promise;
+    
+    let fullText = '';
+    const numPages = pdf.numPages;
+    
+    // Iterate over all pages
+    for (let i = 1; i <= numPages; i++) {
+      try {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          
+          // Extract text items safely
+          const pageText = textContent.items
+          .map((item: any) => item.str || '')
+          .join(' ');
+          
+          fullText += `--- Página ${i} ---\n${pageText}\n\n`;
+      } catch (pageError) {
+          // Ignore page errors silently
+      }
     }
+    
+    return { text: fullText, pageCount: numPages };
+  } finally {
+    // Restore console
+    console.warn = originalWarn;
+    console.error = originalError;
   }
-  
-  return { text: fullText, pageCount: numPages };
 }
